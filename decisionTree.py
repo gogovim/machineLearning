@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+
 from basic import *
+
 
 class decisionTree:
     def __init__(self,method='ID3'):
@@ -20,7 +22,7 @@ class decisionTree:
             
     def build(self,X,Y,A):
         T={'son':None,'key':None,'value':None,'to':None}
-        print(X,Y,A)
+        #print(X,Y,A)
         numY=np.unique(Y)
         if numY.size==0:
             return None
@@ -37,9 +39,9 @@ class decisionTree:
             return T
         '''
         featureIndex=feature[np.argmax(featureGain)]
-        print('feature Index',featureIndex)
+        #print('feature Index',featureIndex)
         T['key']=featureIndex
-        print(T['key'],featureIndex)
+        #print(T['key'],featureIndex)
         SX=self.spiltXOnx(X,X[:,featureIndex])[1]
         keyValues,SY=self.spiltXOnx(Y,X[:,featureIndex])
         T['to']=dict(zip(keyValues,range(len(keyValues))))
@@ -68,5 +70,3 @@ if __name__=="__main__":
     dt.train(X,Y)
 
     dt.predict([[0,0],[1,1],[0,1],[1,0]])
-
-

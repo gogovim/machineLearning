@@ -1,80 +1,72 @@
 import numpy as np
 import pandas as pd
+from basic import *
 
 class decisionTree:
     def __init__(self,method='ID3'):
         self.T={}
         self.method=method
-    def getPro(self,D):
-        print("D:",D)
-        P=pd.value_counts(D).values/len(D)
-        return P
-    def infoEntropy(self,D):
-        P=self.getPro(D)
-        return np.sum(-P*np.log2(P))
-    def infoEntropyA(self,Dj,Pj):
-        return np.sum(list(map(lambda x,p:p*self.infoEntropy(x),Dj,Pj)))
-    def gini(self,D):
-        P=self.getPro(D)
-        return 1-np.sum(P*P)
-    def giniA(self,Dj,Pj):
-        return np.sum(list(map(lambda x,p:p*self.gini(x),Dj,Pj)))
+        self.eps=1e-7
+
     def spiltXOnx(self,X,by):
-        print('begin spilt:',X,by)
         uniqueby=np.unique(by)
-        print('spilt',list(map(lambda a:X[by==a],uniqueby)))
         return (uniqueby,list(map(lambda a:X[by==a],uniqueby)))
-    def gain(self,x,Y,cal1,cal2):
-        print('begin gain')
-        m=len(Y)
-        Dj=self.spiltXOnx(X=Y,by=x)[1]
-        Pj=np.array(list(map(lambda a:len(a)/m,Dj)))
-        print(Dj)
-        print(Pj)
-        print(cal1(Dj,Pj))
-        return cal2(Y)-cal1(Dj,Pj)
-    def ID3(self,X,Y):
-        """
-        Classification Tree
-        Infomation Entropy
-        """
-        
-        print('ID3:\n','X:',X,'Y',Y)
-        T={'son':[],'key':None,'value':None,'to':{}}
-        if np.unique(Y).size==1:
+
+    def gain(self,x,Y):
+        if self.method=='infoGain':
+            return infoGain(x,Y)
+        if self.method=='infoRatio':
+            return infoRatio(x,Y)
+            
+    def build(self,X,Y,A):
+        T={'son':None,'key':None,'value':None,'to':None}
+        print(X,Y,A)
+        numY=np.unique(Y)
+        if numY.size==0:
+            return None
+        if numY.size==1:
             T['value']=Y[0]
             return T
-        choose=list(map(lambda x:self.gain(x,Y,self.infoEntropyA,self.infoEntropy),np.transpose(X)))
-        T['key']=np.argmax(choose)
-        print('key:',T['key'])
-        print('test X:',X)
-        SX=self.spiltXOnx(X,X[:,T['key']])[1]
-        SY=self.spiltXOnx(Y,X[:,T['key']])[1]
-        keys=self.spiltXOnx(Y,X[:,T['key']])[0]
-        T['to']=dict(zip(keys,range(len(keys))))
-        T['son']=list(map(lambda x,y:self.ID3(x,y),SX,SY))
+        T['value']=pd.value_counts(Y).index[0]
+        if A==set():
+            return T
+        feature=list(A)
+        featureGain=list(map(lambda f:self.gain(X[:,f],Y),feature))
+        '''
+        if np.max(featureGain)<self.eps:
+            return T
+        '''
+        featureIndex=feature[np.argmax(featureGain)]
+        print('feature Index',featureIndex)
+        T['key']=featureIndex
+        print(T['key'],featureIndex)
+        SX=self.spiltXOnx(X,X[:,featureIndex])[1]
+        keyValues,SY=self.spiltXOnx(Y,X[:,featureIndex])
+        T['to']=dict(zip(keyValues,range(len(keyValues))))
+        A.remove(featureIndex)
+        T['son']=list(map(lambda x,y:self.build(x,y,A.copy()),SX,SY))
         return T
     def findx(self,x,T):
-        print(x,T)
-        if T['key']==None:
+        if T['key'] is None:
             return T['value']
-        return self.findx(x,T['son'][T['to'][x[T['key']]]])
-    def findX(self,X,T):
-        return np.array(list(map(lambda x:self.findx(x,T),X)))
+        featureIndex=T['key']
+        return self.findx(x,T['son'][T['to'][x[featureIndex]]])
     def train(self,X,Y):
-        if self.method=='ID3':
-            self.T=self.ID3(X,Y)
+        m=X.shape[1]
+        A=set(range(m))
+        self.T=self.build(X,Y,A)
     def predict(self,X):
-        if self.method=='ID3':
-            Y=self.findX(X,self.T)
-        print(X,Y)
+        Y=np.array(list(map(lambda x:self.findx(x,self.T),X)))
+        print(list(zip(X,Y)))
         return Y
 
-
 if __name__=="__main__":
-    dt=decisionTree(method='ID3')
+    dt=decisionTree(method='infoRatio')
+
     X=np.array([[0,0],[1,1],[0,1],[1,0]])
     Y=np.array([0,0,1,1])
     dt.train(X,Y)
+
     dt.predict([[0,0],[1,1],[0,1],[1,0]])
-    
+
+
